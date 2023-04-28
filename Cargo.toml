@@ -1,0 +1,2 @@
+[workspace]
+members = ["bubble", "selection", "insertion", "binary-search", "merge", "linked_list", "binary-tree", "bit_xor", "quick-sort", "email-sender", "subsetter"]
