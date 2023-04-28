@@ -35,10 +35,7 @@
 // macro expands to a bunch of impl blocks, one for each type. The macro is called in the
 // main function.
 
-use std::{
-    collections::HashSet,
-    fmt::{Debug, Display},
-};
+use std::collections::HashSet;
 
 pub trait SubSetter {
     type T: Sized;
@@ -52,12 +49,12 @@ macro_rules! impl_subsets {
             fn subsets(&self) -> Vec<HashSet<Self::T>> {
                 let mut out = vec![];
 
-                out.push(set!({}));
+                out.push(set!(<Self::T>{}));
 
                 for el in self {
                     let mut list = vec![];
                     for v in out.iter() {
-                        list.push(union!(v.clone(), set!({ el })));
+                        list.push(union!(v.clone(), set!(<Self::T>{ el })));
                     }
                     out.append(&mut list);
                 }
@@ -71,10 +68,10 @@ macro_rules! impl_subsets {
 impl_subsets! {i32, u32, String}
 
 fn main() {
-    println!("{:?}", set!({1, 2, 3, 4}).subsets());
+    println!("{:?}", set!(<i32>{1, 2, 3, 4}).subsets());
     println!(
         "{:?}",
-        set!({String::from("a"), String::from("b"), String::from("c")}).subsets()
+        set!(<String>{String::from("a"), String::from("b"), String::from("c")}).subsets()
     );
 }
 
@@ -98,25 +95,32 @@ fn assert_same<T: Sized + Eq + PartialOrd + Clone + Ord>(a: Vec<HashSet<T>>, b: 
 
 #[macro_export]
 macro_rules! set {
-    ($({$($a:ident$(,)?)*})?) => {{
-        let mut inner = HashSet::new();
+    (<$ty:ty>$({$($a:ident$(,)?)*})?) => {{
+
+        // Add empty set
         $(
+            let mut inner = HashSet::<$ty>::new();
+            let empty = HashSet::<$ty>::new();
             $(
                 inner.insert($a.clone());
-            )?
-        )*
-        inner
+            )*
+
+            union!(inner, empty)
+        )?
+
     }};
 
-    ($({$($a:expr$(,)?)*})?) => {{
-        let mut inner = HashSet::new();
+    (<$ty:ty>$({$($a:expr$(,)?)*})?) => {{
         $(
+            // Add empty set
+            let mut inner = HashSet::<$ty>::new();
+            let empty = HashSet::<$ty>::new();
             $(
+                inner.insert($a.clone());
+            )*
 
-                inner.insert($a);
-            )?
-        )*
-        inner
+            union!(inner, empty)
+        )?
     }};
 }
 
@@ -141,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_set_macro() {
-        assert_eq!(set!({1, 2, 3}), {
+        assert_eq!(set!(<i32>{1, 2, 3}), {
             let mut set = HashSet::new();
             set.insert(1);
             set.insert(2);
@@ -153,22 +157,31 @@ mod tests {
 
     #[test]
     fn test_subsetter() {
-        assert_same(set!({ 1 }).subsets(), vec![set!(), set!({ 1 })]);
+        assert_same(set!(<i32>{}).subsets(), vec![set!(<i32>{})]);
         assert_same(
-            set!({1, 2}).subsets(),
-            vec![set!(), set!({ 1 }), set!({ 2 }), set!({1, 2})],
+            set!(<i32>{ 1 }).subsets(),
+            vec![set!(<i32>{}), set!(<i32>{ 1 })],
         );
         assert_same(
-            set!({1, 2, 3}).subsets(),
+            set!(<i32>{1, 2}).subsets(),
             vec![
-                set!({1, 2, 3}),
-                set!({1,2}),
-                set!({2, 3}),
-                set!({1,3}),
-                set!({ 1 }),
-                set!({ 2 }),
-                set!({ 3 }),
-                set!(),
+                set!(<i32>{}),
+                set!(<i32>{ 1 }),
+                set!(<i32>{ 2 }),
+                set!(<i32>{1, 2}),
+            ],
+        );
+        assert_same(
+            set!(<i32>{1, 2, 3}).subsets(),
+            vec![
+                set!(<i32>{1, 2, 3}),
+                set!(<i32>{1,2}),
+                set!(<i32>{2, 3}),
+                set!(<i32>{1,3}),
+                set!(<i32>{ 1 }),
+                set!(<i32>{ 2 }),
+                set!(<i32>{ 3 }),
+                set!(<i32>{}),
             ],
         );
     }
